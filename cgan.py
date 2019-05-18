@@ -34,6 +34,7 @@ parser.add_argument("--channels", type=int, default=3, help="number of image cha
 parser.add_argument("--sample_interval", type=int, default=400, help="interval between image sampling")
 parser.add_argument("--dataroot", type=str, default='selected_cartoonset100k/images/', help="images")
 parser.add_argument("--labelroot", type=str, default='selected_cartoonset100k/cartoon_attr.txt', help="label")
+parser.add_argument("--testlabel", type=str, default='sample_test/sample_human_testing_labels.txt', help="test label")
 opt = parser.parse_args()
 print(opt)
 
@@ -148,16 +149,25 @@ FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 
 
-def sample_image(n_row, batches_done):
+def sample_image(n_row, batches_done,test_lab,test_len):
     """Saves a grid of generated digits ranging from 0 to n_classes"""
     # Sample noise
-    z = Variable(FloatTensor(np.random.normal(0, 1, (n_row ** 2, opt.latent_dim))))
+    z = Variable(FloatTensor(np.random.normal(0, 1, (720, opt.latent_dim))))#n_row ** 2
     # Get labels ranging from 0 to n_classes for n rows
-    labels = np.array([num for _ in range(n_row) for num in range(n_row)])
-    labels = Variable(LongTensor(labels))
+    #labels = np.array([num for _ in range(n_row) for num in range(n_row)])#
+    labels = test_lab
+    labels = Variable(FloatTensor(labels))#
+    #pdb.set_trace()
     gen_imgs = generator(z, labels)
-    save_image(gen_imgs.data, "images/%d.png" % batches_done, nrow=n_row, normalize=True)
+    save_image(gen_imgs.data, "images/%d.png" % batches_done, nrow=27, normalize=True)#nrow=n_row
 
+test_lab = []
+ftest = open(opt.testlabel, "r")
+testlines = ftest.readlines()
+test_len = int(testlines[0])
+for tcount in range(test_len):
+    test_lab.append(list(map(lambda x:int(x),testlines[tcount+2].split()[0:])))
+test_lab = torch.cuda.FloatTensor(test_lab)
 
 # ----------
 #  Training
@@ -226,5 +236,5 @@ for epoch in range(opt.n_epochs):
         )
 
         batches_done = epoch * len(dataloader) + i
-        '''if batches_done % opt.sample_interval == 0:
-            sample_image(n_row=10, batches_done=batches_done)'''
+        if batches_done % opt.sample_interval == 0:
+            sample_image(n_row=10, batches_done=batches_done, test_lab=test_lab, test_len=test_lab)
