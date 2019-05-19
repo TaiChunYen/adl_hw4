@@ -66,8 +66,9 @@ class Generator(nn.Module):
 
 generator = Generator()
 generator.load_state_dict(torch.load('./generator.pkl'))
-'''if cuda:
-    generator.cuda()'''
+if cuda:
+    generator.cuda()
+generator.eval()
 
 test_lab = []
 ftest = open(opt.testlabel, "r")
@@ -77,12 +78,13 @@ for tcount in range(test_len):
     test_lab.append(list(map(lambda x:int(x),testlines[tcount+2].split()[0:])))
 test_lab = torch.cuda.FloatTensor(test_lab)
 
+for i in range(len(test_lab)):
 # Sample noise
-z = Variable(FloatTensor(np.random.normal(0, 1, (5000, opt.latent_dim)))).cpu()#n_row ** 2
+    z = Variable(FloatTensor(np.random.normal(0, 1, (1, opt.latent_dim))))#n_row ** 2
 # Get labels ranging from 0 to n_classes for n rows
 #labels = np.array([num for _ in range(n_row) for num in range(n_row)])#
-labels = test_lab
-labels = Variable(FloatTensor(labels)).cpu()#
-gen_imgs = generator(z, labels)
-for i in range(len(gen_imgs)):
-    save_image(gen_imgs[i].data, "fid_pic/%d.png" % i, normalize=True)#nrow=n_row
+    labels = test_lab[i]
+    labels = Variable(FloatTensor(labels).view(1,-1))#
+    gen_imgs = generator(z, labels)
+
+    save_image(gen_imgs.data, "fid_pic/%d.png" % i, normalize=True)#nrow=n_row

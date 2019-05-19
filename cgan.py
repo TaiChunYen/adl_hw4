@@ -67,10 +67,10 @@ class Generator(nn.Module):
 
     def forward(self, noise, labels):
         # Concatenate label embedding and image to produce input
-        gen_input = torch.cat((labels, noise), -1)#self.label_emb(labels)
-        #pdb.set_trace()
-        img = self.model(gen_input)
+        gen_input = torch.cat((labels, noise), -1)#self.label_emb(labels)        
+        img = self.model(gen_input)        
         img = img.view(img.size(0), *img_shape)
+        #pdb.set_trace()
         return img
 
 
@@ -81,7 +81,7 @@ class Discriminator(nn.Module):
         #self.label_embedding = nn.Embedding(opt.n_classes, opt.n_classes)#
 
         self.model = nn.Sequential(
-            nn.Linear(opt.n_classes + int(np.prod(img_shape)), 512),
+            nn.Linear(int(np.prod(img_shape)), 512),#opt.n_classes+
             nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(512, 512),
             nn.Dropout(0.4),
@@ -89,18 +89,23 @@ class Discriminator(nn.Module):
             nn.Linear(512, 512),
             nn.Dropout(0.4),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Linear(512, 1),
+            #nn.Linear(512, 1),
         )
+        self.adv = nn.Linear(512, 1)#
+        self.aux = nn.Linear(512, opt.n_classes)#
 
-    def forward(self, img, labels):
+    def forward(self, img):#, labels
         # Concatenate label embedding and image to produce input
-        d_in = torch.cat((img.view(img.size(0), -1), labels), -1)#self.label_embedding(labels)
-        validity = self.model(d_in)
-        return validity
+        d_in = img.view(img.size(0), -1)#torch.cat((, labels), -1)
+        out = self.model(d_in)#validity = ,d_in
+        validity = self.adv(out)#
+        label = self.aux(out)#
+        return validity, label#
 
 
 # Loss functions
 adversarial_loss = torch.nn.MSELoss()
+auxiliary_loss = torch.nn.MultiLabelSoftMarginLoss()#
 
 # Initialize generator and discriminator
 generator = Generator()
@@ -115,6 +120,7 @@ if cuda:
     generator.cuda()
     discriminator.cuda()
     adversarial_loss.cuda()
+    auxiliary_loss.cuda()
 
 # Configure data loader
 '''os.makedirs("../../data/mnist", exist_ok=True)
@@ -189,7 +195,7 @@ for epoch in range(opt.n_epochs):
 
         # Configure input
         real_imgs = Variable(imgs.type(FloatTensor))
-        labels = Variable(labels.type(FloatTensor))#
+        labels = Variable(labels.type(FloatTensor))
 
         # -----------------
         #  Train Generator
@@ -202,15 +208,15 @@ for epoch in range(opt.n_epochs):
         #gen_labels = Variable(LongTensor(np.random.randint(0, opt.n_classes, batch_size)))#
         gen_labels=[]#
         for gl in range(batch_size):#
-            gen_labels.append(np.random.randint(0, 2, opt.n_classes))#
-        gen_labels = Variable(FloatTensor(gen_labels))#
+            gen_labels.append(np.random.randint(0, 2, opt.n_classes))
+        gen_labels = Variable(FloatTensor(gen_labels))
         
         # Generate a batch of images
         gen_imgs = generator(z, gen_labels)
 
         # Loss measures generator's ability to fool the discriminator
-        validity = discriminator(gen_imgs, gen_labels)
-        g_loss = adversarial_loss(validity, valid)
+        validity , pred_label= discriminator(gen_imgs)#
+        g_loss = (adversarial_loss(validity, valid) + auxiliary_loss(pred_label, gen_labels)) / 2#
 
         g_loss.backward()
         optimizer_G.step()
@@ -222,12 +228,12 @@ for epoch in range(opt.n_epochs):
         optimizer_D.zero_grad()
 
         # Loss for real images
-        validity_real = discriminator(real_imgs, labels)
-        d_real_loss = adversarial_loss(validity_real, valid)
+        validity_real, real_aux = discriminator(real_imgs)#, labels
+        d_real_loss = (adversarial_loss(validity_real, valid) + auxiliary_loss(real_aux, labels)) / 2#
 
         # Loss for fake images
-        validity_fake = discriminator(gen_imgs.detach(), gen_labels)
-        d_fake_loss = adversarial_loss(validity_fake, fake)
+        validity_fake, fake_aux = discriminator(gen_imgs.detach())#, gen_labels
+        d_fake_loss = (adversarial_loss(validity_fake, fake) + auxiliary_loss(fake_aux, gen_labels)) / 2#
 
         # Total discriminator loss
         d_loss = (d_real_loss + d_fake_loss) / 2
@@ -242,6 +248,6 @@ for epoch in range(opt.n_epochs):
 
         batches_done = epoch * len(dataloader) + i
         if batches_done % opt.sample_interval == 0:
-            sample_image(n_row=10, batches_done=batches_done, test_lab=test_lab, test_len=test_lab)
+            sample_image(n_row=10, batches_done=batches_done, test_lab=test_lab, test_len=test_len)
             torch.save(generator.state_dict(),'./generator.pkl')
             torch.save(discriminator.state_dict(),'./discriminator.pkl')
