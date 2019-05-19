@@ -106,6 +106,11 @@ adversarial_loss = torch.nn.MSELoss()
 generator = Generator()
 discriminator = Discriminator()
 
+if os.path.isfile('./generator.pkl'):
+    generator.load_state_dict(torch.load('./generator.pkl'))
+if os.path.isfile('./discriminator.pkl'):
+    discriminator.load_state_dict(torch.load('./discriminator.pkl'))
+
 if cuda:
     generator.cuda()
     discriminator.cuda()
@@ -238,3 +243,5 @@ for epoch in range(opt.n_epochs):
         batches_done = epoch * len(dataloader) + i
         if batches_done % opt.sample_interval == 0:
             sample_image(n_row=10, batches_done=batches_done, test_lab=test_lab, test_len=test_lab)
+            torch.save(generator.state_dict(),'./generator.pkl')
+            torch.save(discriminator.state_dict(),'./discriminator.pkl')
