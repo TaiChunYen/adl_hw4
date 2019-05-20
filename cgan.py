@@ -105,7 +105,7 @@ class Discriminator(nn.Module):
 
 # Loss functions
 adversarial_loss = torch.nn.MSELoss()
-#auxiliary_loss = torch.nn.MultiLabelSoftMarginLoss()#
+#auxiliary_loss = torch.nn.MSELoss()#
 
 # Initialize generator and discriminator
 generator = Generator()
