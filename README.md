@@ -8,7 +8,8 @@ wgan_gp_train.py(train model and print generator result in interval)
 w_printpic.py(test result by label)
 
 ## model structure:
-
+![image](https://github.com/TaiChunYen/adl_HW4/blob/master/picture/gmodel.png)
+![image](https://github.com/TaiChunYen/adl_HW4/blob/master/picture/dmodel.png)
 
 ## how to train model:  
 python3.6 wgan_gp_train.py [parameter]  
@@ -38,7 +39,11 @@ parameter list:
 --channels  
 --testlabel  
 --outputdir  
-
+![image](https://github.com/TaiChunYen/adl_HW4/blob/master/picture/epoch2.png)
+![image](https://github.com/TaiChunYen/adl_HW4/blob/master/picture/epoch7.png)
+![image](https://github.com/TaiChunYen/adl_HW4/blob/master/picture/epoch12.png)
+![image](https://github.com/TaiChunYen/adl_HW4/blob/master/picture/epoch17.png)
+![image](https://github.com/TaiChunYen/adl_HW4/blob/master/picture/epoch24.png)
 
 
 ## reference:
